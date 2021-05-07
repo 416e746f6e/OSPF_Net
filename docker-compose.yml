@@ -1,0 +1,169 @@
+version: "3.5"
+
+services:
+
+
+    attacker:
+        build: ./dind
+        container_name: attacker
+        hostname: 'attacker'
+        privileged: true
+        stdin_open: true
+        tty: true
+        volumes:
+                - ./dind/routopsy/:/root/routopsy/
+                - ./dind/scripts/:/root/scripts/
+                - ./dind/honeypot/docker-ssh-honeypot:/root/docker-ssh-honeypot             
+        networks:
+            sub-10.30.10.0:
+                ipv4_address: 10.30.10.2               
+        command: sh -c " service ssh start && service docker start &&
+                      exec /root/scripts/prepare_images.sh &&
+                      tail -f /dev/null
+                 "
+
+
+    victim:
+        build: ./pc1
+        container_name: victim
+        hostname: 'victim'
+        privileged: true
+        tty: true     
+        networks:
+            sub-10.30.0.0:
+                ipv4_address: 10.30.0.2               
+        command: bash -c " 
+                      ip route del default  &&
+                      ip route add default via 10.30.0.10 &&
+                      tail -f /dev/null
+                 "
+
+
+
+    r1:
+        image: frrouting/frr:v7.5.0
+        container_name: r1
+        tty: true
+        privileged: true
+        cap_add:
+                - ALL
+        sysctls:
+                - net.ipv4.ip_forward=1
+        volumes:
+                - ./R1/daemons:/etc/frr/daemons
+                - ./R1/frr.conf:/etc/frr/frr.conf
+                - ./R1/vtysh.conf:/etc/frr/vtysh.conf                
+        networks:
+            sub-172.30.0.0:
+                ipv4_address: 172.30.0.10
+            sub-10.30.0.0:
+                ipv4_address: 10.30.0.10
+    
+    r2:
+        image: frrouting/frr:v7.5.0
+        container_name: r2
+        tty: true
+        privileged: true
+        cap_add:
+                - ALL
+        sysctls:
+                - net.ipv4.ip_forward=1
+        volumes:
+                - ./R2/daemons:/etc/frr/daemons
+                - ./R2/frr.conf:/etc/frr/frr.conf
+                - ./R2/vtysh.conf:/etc/frr/vtysh.conf                
+        networks:
+            sub-172.30.0.0:
+                ipv4_address: 172.30.0.20
+            sub-172.30.10.0:
+                ipv4_address: 172.30.10.20
+
+    r3:
+        image: frrouting/frr:v7.5.0
+        container_name: r3
+        tty: true
+        privileged: true
+        cap_add:
+                - ALL
+        sysctls:
+                - net.ipv4.ip_forward=1
+        volumes:
+                - ./R3/daemons:/etc/frr/daemons
+                - ./R3/frr.conf:/etc/frr/frr.conf
+                - ./R3/vtysh.conf:/etc/frr/vtysh.conf                
+        networks:
+            sub-172.30.0.0:
+                ipv4_address: 172.30.0.30
+            sub-172.30.20.0:
+                ipv4_address: 172.30.20.30
+                
+    r4:
+        image: frrouting/frr:v7.5.0
+        container_name: r4
+        tty: true
+        privileged: true
+        cap_add:
+                - ALL
+        sysctls:
+                - net.ipv4.ip_forward=1
+        volumes:
+                - ./R4/daemons:/etc/frr/daemons
+                - ./R4/frr.conf:/etc/frr/frr.conf
+                - ./R4/vtysh.conf:/etc/frr/vtysh.conf                
+        networks:
+            sub-172.30.20.0:
+                ipv4_address: 172.30.20.40
+            sub-10.30.20.0:
+                ipv4_address: 10.30.20.40   
+
+    r5:
+        image: frrouting/frr:v7.5.0
+        container_name: r5
+        tty: true
+        privileged: true
+        cap_add:
+                - ALL
+        sysctls:
+                - net.ipv4.ip_forward=1
+        volumes:
+                - ./R5/daemons:/etc/frr/daemons
+                - ./R5/frr.conf:/etc/frr/frr.conf
+                - ./R5/vtysh.conf:/etc/frr/vtysh.conf                
+        networks:
+            sub-172.30.10.0:
+                ipv4_address: 172.30.10.50
+            sub-10.30.10.0:
+                ipv4_address: 10.30.10.50                
+
+                
+networks:
+    sub-10.30.0.0:
+        name: sub-10.30.0.0
+        ipam:
+            config:
+                - subnet: 10.30.0.0/24
+    sub-10.30.10.0:
+        name: sub-10.30.10.0
+        ipam:
+            config:
+                - subnet: 10.30.10.0/24
+    sub-10.30.20.0:
+        name: sub-10.30.20.0
+        ipam:
+            config:
+                - subnet: 10.30.20.0/24
+    sub-172.30.0.0:
+        name: sub-172.30.0.0
+        ipam:
+            config:
+                - subnet: 172.30.0.0/24
+    sub-172.30.10.0:
+        name: sub-172.30.10.0
+        ipam:
+            config:
+                - subnet: 172.30.10.0/24
+    sub-172.30.20.0:
+        name: sub-172.30.20.0
+        ipam:
+            config:
+                - subnet: 172.30.20.0/24
